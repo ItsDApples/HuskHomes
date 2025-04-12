@@ -1,170 +1,39 @@
-# Builds, tests the project with Gradle and uploads to Modrinth
-name: CI Tests & Publish
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: EcoenchantsCI
 
 on:
   push:
-    branches: [ 'master' ]
-    paths-ignore:
-      - 'docs/**'
-      - 'workflows/**'
-      - 'README.md'
-
-permissions:
-  contents: read
-  checks: write
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout for CI 🛎️'
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: 'Set up JDK 21 📦'
-        uses: actions/setup-java@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
         with:
-          java-version: '21'
+          java-version: 17
           distribution: 'temurin'
-      - name: 'Build with Gradle 🏗️'
-        uses: gradle/gradle-build-action@v3
+
+      - name: Grant execute permission for Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+        
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
         with:
-          arguments: build test publish
-        env:
-          SNAPSHOTS_MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          SNAPSHOTS_MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-      - name: 'Publish Test Report 📊'
-        uses: mikepenz/action-junit-report@v5
-        if: success() || failure() # Continue on failure
-        with:
-          report_paths: '**/build/test-results/test/TEST-*.xml'
-      - name: 'Fetch Version Name 📝'
-        run: |
-          echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew properties --no-daemon --console=plain -q | grep "^version:" | awk '{printf $2}')"
-        id: fetch-version
-      - name: Get Version
-        run: |
-          echo "version_name=${{steps.fetch-version.outputs.VERSION_NAME}}" >> $GITHUB_ENV
-      - name: 'Publish to William278.net 🚀'
-        uses: WiIIiam278/bones-publish-action@v1
-        with:
-          api-key: ${{ secrets.BONES_API_KEY }}
-          project: 'huskhomes'
-          channel: 'alpha'
-          version: ${{ env.version_name }}
-          changelog: ${{ github.event.head_commit.message }}
-          distro-names: |
-            paper
-            fabric-1.21.1
-            fabric-1.21.4
-          distro-groups: |
-            paper
-            fabric
-            fabric
-          distro-descriptions: |
-            Paper
-            Fabric 1.21.1
-            Fabric 1.21.4
-          files: |
-            target/HuskHomes-Paper-${{ env.version_name }}.jar
-            target/HuskHomes-Fabric-${{ env.version_name }}+mc.1.21.1.jar
-            target/HuskHomes-Fabric-${{ env.version_name }}+mc.1.21.4.jar
-      - name: 'Spigot: Publish to Modrinth & Hangar 🚰'
-        uses: WiIIiam278/mc-publish@hangar
-        with:
-          modrinth-id: J6U9o3JG
-          modrinth-featured: false
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          modrinth-dependencies: |
-            dynmap | suggests | *
-            bluemap | suggests | *
-            pl3xmap | suggests | *
-            plan | suggests | *
-          hangar-id: William278/HuskHomes
-          hangar-token: ${{ secrets.HANGAR_API_KEY }}
-          hangar-version-type: Alpha
-          files-primary: target/HuskHomes-Paper-${{ env.version_name }}.jar
-          name: HuskHomes (Spigot) v${{ env.version_name }}
-          version: ${{ env.version_name }}
-          version-type: alpha
-          changelog: ${{ github.event.head_commit.message }}
-          loaders: |
-            spigot
-            paper
-            folia
-          game-versions: |
-            1.17.1
-            1.18
-            1.18.1
-            1.18.2
-            1.19
-            1.19.1
-            1.19.2
-            1.19.3
-            1.19.4
-            1.20
-            1.20.1
-            1.20.2
-            1.20.3
-            1.20.4
-            1.20.5
-            1.20.6
-            1.21
-            1.21.1
-            1.21.2
-            1.21.4
-          java: 17
-      - name: 'Fabric 1.21.1: Publish to Modrinth & CurseForge 🧵'
-        uses: WiIIiam278/mc-publish@hangar
-        if: success() || failure()
-        with:
-          modrinth-id: J6U9o3JG
-          modrinth-featured: false
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          curseforge-id: 849217
-          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-          dependencies: |
-            fabric-api | requires | *
-            dynmap | suggests | *
-            bluemap | suggests | *
-            pl3xmap | suggests | *
-            luckperms | suggests | *
-            plan | suggests | *
-            impactor | suggests | *
-            placeholder-api | suggests | *
-          files-primary: target/HuskHomes-Fabric-${{ env.version_name }}+mc.1.21.1.jar
-          name: HuskHomes (Fabric) v${{ env.version_name }}
-          version: ${{ env.version_name }}
-          version-type: alpha
-          changelog: ${{ github.event.head_commit.message }}
-          loaders: |
-            fabric
-          game-versions: |
-            1.21.1
-          java: 21
-      - name: 'Fabric 1.21.4: Publish to Modrinth & CurseForge 🧵'
-        uses: WiIIiam278/mc-publish@hangar
-        if: success() || failure()
-        with:
-          modrinth-id: J6U9o3JG
-          modrinth-featured: false
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          curseforge-id: 849217
-          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-          dependencies: |
-            fabric-api | requires | *
-            dynmap | suggests | *
-            bluemap | suggests | *
-            pl3xmap | suggests | *
-            luckperms | suggests | *
-            plan | suggests | *
-            impactor | suggests | *
-            placeholder-api | suggests | *
-          files-primary: target/HuskHomes-Fabric-${{ env.version_name }}+mc.1.21.4.jar
-          name: HuskHomes (Fabric) v${{ env.version_name }}
-          version: ${{ env.version_name }}
-          version-type: alpha
-          changelog: ${{ github.event.head_commit.message }}
-          loaders: |
-            fabric
-          game-versions: |
-            1.21.4
-          java: 21
+          name: Output Files
+          path: build/libs/*.jar
