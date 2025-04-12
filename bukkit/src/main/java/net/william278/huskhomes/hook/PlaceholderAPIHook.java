@@ -96,8 +96,51 @@ public class PlaceholderAPIHook extends Hook {
                         .getOrDefault(player.getName(), List.of()));
                 case "ignoring_tp_requests" -> getBooleanValue(plugin.getManager().requests()
                         .isIgnoringRequests(player));
-                default -> null;
+                default -> handleHomeIndexParam(player, params);
             };
+        }
+
+        @Nullable
+        private String handleHomeIndexParam(@NotNull OnlineUser player, @NotNull String params) {
+            if (params.startsWith("homes_")) {
+                try {
+                    int index = Integer.parseInt(params.substring(5)) - 1; // Convert to 0-based index
+                    if (index < 0) {
+                        return null;
+                    }
+                    List<Home> homes = plugin.getManager().homes().getUserHomes().get(player.getName());
+                    if (homes == null || homes.isEmpty()) {
+                        return "No homes";
+                    }
+
+                    if (index < homes.size()) {
+                        return homes.get(index).getName();
+                    }
+                    return "Index out of range";
+                } catch (NumberFormatException e) {
+                    return "Invalid number";
+                }
+            }
+            else if (params.startsWith("homes_")) {
+                try {
+                    int index = Integer.parseInt(params.substring(5)) - 1; // Convert to 0-based index
+                    if (index < 0) {
+                        return null;
+                    }
+                    List<Home> homes = plugin.getManager().homes().getUserHomes().get(player.getName());
+                    if (homes == null || homes.isEmpty()) {
+                        return "No homes";
+                    }
+
+                    if (index < homes.size()) {
+                        return homes.get(index).getName();
+                    }
+                    return "Index out of range";
+                } catch (NumberFormatException e) {
+                    return "Invalid number";
+                }
+            }
+            return null;
         }
 
         @NotNull
